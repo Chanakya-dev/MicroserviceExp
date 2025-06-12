@@ -32,7 +32,23 @@ jobs:
       - name: SSH and Deploy on EC2
         run: |
           ssh ubuntu@13.60.246.177 << 'EOF'
+            set -e
             cd /home/ubuntu/micros
+
+            # Install Maven if not installed
+            if ! command -v mvn &> /dev/null; then
+              sudo apt update
+              sudo apt install -y maven
+            fi
+
+            # Build projects
+            for project in svs demo1 demo2 ApiGateway; do
+              cd "$project"
+              mvn clean package -DskipTests
+              cd ..
+            done
+
+            # Restart docker containers
             docker-compose down
             docker-compose up -d --build
           EOF
