@@ -1,0 +1,17 @@
+package com.micro.dem2.demo2;
+
+
+import jakarta.persistence.*;
+
+@Entity
+public class Task {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    private String title;
+    private String description;
+
+    // Getters and Setters
+}

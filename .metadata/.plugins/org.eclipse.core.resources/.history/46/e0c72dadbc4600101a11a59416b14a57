@@ -1,0 +1,10 @@
+server:
+  port: 8082
+
+spring:
+  application:
+    name: demo2
+
+  data:
+    mongodb:
+      uri: mongodb://localhost:27017/demo2db  # Replace with your DB name and host if different

@@ -1,0 +1,34 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+
+  cloud:
+    gateway:
+      discovery:
+        locator:
+          enabled: true
+          lower-case-service-id: true
+      routes:
+        - id: demo1
+          uri: lb://demo1
+          predicates:
+            - Path=/api/cvc/**
+          filters:
+            - name: JwtAuthenticationFilter
+
+        - id: demo2
+          uri: lb://demo2
+          predicates:
+            - Path=/api/tasks/**
+          filters:
+            - name: JwtAuthenticationFilter
+
+eureka:
+  client:
+    register-with-eureka: true
+    fetch-registry: true
+    service-url:
+      defaultZone: http://localhost:8761/eureka

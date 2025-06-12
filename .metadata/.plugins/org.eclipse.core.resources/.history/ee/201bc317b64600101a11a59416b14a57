@@ -1,0 +1,5 @@
+package com.micro.sample.ApiGateway;
+
+public class JwtUtil {
+
+}

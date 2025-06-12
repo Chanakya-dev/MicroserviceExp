@@ -1,0 +1,49 @@
+package com.micro.sample.ApiGateway;
+
+import io.jsonwebtoken.*;
+import io.jsonwebtoken.security.Keys;
+import org.springframework.stereotype.Component;
+
+import javax.annotation.PostConstruct;
+import javax.crypto.SecretKey;
+import java.util.Base64;
+import java.util.Date;
+
+@Component
+public class JwtUtil {
+
+    private SecretKey secretKey;
+
+    private final long EXPIRATION_TIME = 1000 * 60 * 60; // 1 hour
+
+    // This method will run after the bean is constructed to generate a secure key
+    @PostConstruct
+    public void init() {
+        // Generate a secure key for HS512 algorithm (512 bits)
+        secretKey = Keys.secretKeyFor(SignatureAlgorithm.HS512);
+        // Optional: print base64-encoded key to reuse if needed
+        System.out.println("Generated Secret Key (base64): " + Base64.getEncoder().encodeToString(secretKey.getEncoded()));
+    }
+
+    public String generateToken(String username) {
+        return Jwts.builder()
+                .setSubject(username)
+                .setIssuedAt(new Date())
+                .setExpiration(new Date(System.currentTimeMillis() + EXPIRATION_TIME))
+                .signWith(secretKey)
+                .compact();
+    }
+
+    public String validateToken(String token) {
+        try {
+            return Jwts.parserBuilder()
+                    .setSigningKey(secretKey)
+                    .build()
+                    .parseClaimsJws(token)
+                    .getBody()
+                    .getSubject();
+        } catch (Exception e) {
+            return null;
+        }
+    }
+}

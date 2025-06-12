@@ -1,0 +1,15 @@
+package com.micro.sdc.svc;
+
+import org.junit.jupiter.api.Test;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
+
+@SpringBootTest
+@ActiveProfiles("test")
+class SvcApplicationTests {
+
+	@Test
+	void contextLoads() {
+	}
+
+}
