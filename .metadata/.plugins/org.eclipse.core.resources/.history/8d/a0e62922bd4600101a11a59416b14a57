@@ -1,5 +1,0 @@
-package com.micro.dem2.demo2;
-
-public interface TaskRepository {
-
-}
