@@ -8,7 +8,7 @@ WORKDIR /app
 COPY target/svs-0.0.1-SNAPSHOT.jar server.jar
 
 # Expose the port your service runs on
-EXPOSE 8761  # change for each service
+EXPOSE 8761
 
 # Start the application
 ENTRYPOINT ["java", "-jar", "server.jar"] 
