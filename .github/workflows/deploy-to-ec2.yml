@@ -1,0 +1,38 @@
+name: Deploy to EC2
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.7.0
+        with:
+          ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
+
+      - name: Add EC2 Host to known_hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H 13.60.246.177 >> ~/.ssh/known_hosts
+
+      - name: Copy repo to EC2
+        run: |
+          rsync -avz --delete --exclude='.git*' ./ ubuntu@13.60.246.177:/home/ubuntu/micros/
+        env:
+          RSYNC_RSH: ssh
+
+      - name: SSH and Deploy on EC2
+        run: |
+          ssh ubuntu@13.60.246.177 << 'EOF'
+            cd /home/ubuntu/micros
+            docker-compose down
+            docker-compose up -d --build
+          EOF
