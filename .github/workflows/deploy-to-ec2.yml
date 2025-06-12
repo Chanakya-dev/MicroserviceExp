@@ -39,7 +39,7 @@ jobs:
       - name: Add EC2 Host to known_hosts
         run: |
           mkdir -p ~/.ssh
-          ssh-keyscan -H 13.60.246.177 >> ~/.ssh/known_hosts
+          ssh-keyscan -H 16.171.159.14 >> ~/.ssh/known_hosts
 
       - name: Copy repo to EC2
         run: |
