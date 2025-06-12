@@ -1,15 +1,21 @@
-# Use lightweight Java base image
-FROM openjdk:17-jdk-slim
-
-# Set working directory
+# Stage 1: Build
+FROM maven:3.9.2-eclipse-temurin-17 AS build
 WORKDIR /app
 
-# Copy the built JAR into the container
-COPY target/svs-0.0.1-SNAPSHOT.jar server.jar
+# Copy source code and pom.xml
+COPY pom.xml .
+COPY src ./src
 
-# Expose the port your service runs on
+# Build the jar file
+RUN mvn clean package -DskipTests
+
+# Stage 2: Run
+FROM eclipse-temurin:17-jdk-slim
+WORKDIR /app
+
+# Copy jar from the build stage
+COPY --from=build /app/target/svs-0.0.1-SNAPSHOT.jar server.jar
+
 EXPOSE 8761
 
-# Start the application
-ENTRYPOINT ["java", "-jar", "server.jar"] 
- 
+ENTRYPOINT ["java", "-jar", "server.jar"]
