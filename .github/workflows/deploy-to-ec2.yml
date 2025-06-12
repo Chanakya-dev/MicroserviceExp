@@ -13,6 +13,24 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v3
 
+      - name: Setup JDK 17
+        uses: actions/setup-java@v3
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Build demo1 JAR
+        working-directory: ./demo1/demo1
+        run: mvn clean package -DskipTests
+
+      - name: Build demo2 JAR
+        working-directory: ./demo2/demo2
+        run: mvn clean package -DskipTests
+
+      - name: Build ApiGateway JAR
+        working-directory: ./ApiGateway/ApiGateway
+        run: mvn clean package -DskipTests
+
       - name: Setup SSH
         uses: webfactory/ssh-agent@v0.7.0
         with:
