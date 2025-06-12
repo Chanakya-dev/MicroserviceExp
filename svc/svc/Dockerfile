@@ -14,7 +14,7 @@ FROM openjdk:17-jdk-slim
 WORKDIR /app
 
 # Copy jar from the build stage
-COPY --from=build /app/target/svs-0.0.1-SNAPSHOT.jar server.jar
+COPY --from=build /app/target/svc-0.0.1-SNAPSHOT.jar server.jar
 
 EXPOSE 8761
 
