@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   zookeeper:
     image: bitnami/zookeeper:3.8
@@ -46,7 +48,7 @@ services:
 
   user-service:
     build:
-      context: ./demo1
+      context: ./demo1/demo1
       dockerfile: Dockerfile
     container_name: user-service
     ports:
@@ -66,7 +68,7 @@ services:
 
   task-service:
     build:
-      context: ./demo2
+      context: ./demo2/demo2
       dockerfile: Dockerfile
     container_name: task-service
     ports:
@@ -86,7 +88,7 @@ services:
 
   api-gateway:
     build:
-      context: ./ApiGateway
+      context: ./ApiGateway/ApiGateway
       dockerfile: Dockerfile
     container_name: api-gateway
     ports:
