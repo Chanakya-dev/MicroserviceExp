@@ -18,43 +18,27 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
 
-      - name: Create deployment directories on EC2
+      - name: Create deployment directory on EC2
         run: |
-          ssh -o StrictHostKeyChecking=no ubuntu@51.21.128.40<< 'EOF'
-            mkdir -p ~/deploy/ApiGateway
-            mkdir -p ~/deploy/demo1
-            mkdir -p ~/deploy/demo2
-            mkdir -p ~/deploy/svc
+          ssh -o StrictHostKeyChecking=no ubuntu@51.21.128.40 << 'EOF'
+            mkdir -p ~/deploy
           EOF
 
-      - name: Copy ApiGateway files
+      - name: Clone repo on EC2
         run: |
-          scp -o StrictHostKeyChecking=no ApiGateway/ApiGateway/ApiGateway.jar ubuntu@51.21.128.40:~/deploy/ApiGateway/
-          scp -o StrictHostKeyChecking=no ApiGateway/ApiGateway/Dockerfile ubuntu@51.21.128.40:~/deploy/ApiGateway/
-
-      - name: Copy demo1 files
-        run: |
-          scp -o StrictHostKeyChecking=no demo1/demo1/demo1.jar ubuntu@51.21.128.40:~/deploy/demo1/
-          scp -o StrictHostKeyChecking=no demo1/demo1/Dockerfile ubuntu@51.21.128.40:~/deploy/demo1/
-
-      - name: Copy demo2 files
-        run: |
-          scp -o StrictHostKeyChecking=no demo2/demo2/demo2.jar ubuntu@51.21.128.40:~/deploy/demo2/
-          scp -o StrictHostKeyChecking=no demo2/demo2/Dockerfile ubuntu@51.21.128.40:~/deploy/demo2/
-
-      - name: Copy svc files
-        run: |
-          scp -o StrictHostKeyChecking=no svc/svc/svc.jar ubuntu@51.21.128.40:~/deploy/svc/
-          scp -o StrictHostKeyChecking=no svc/svc/Dockerfile ubuntu@51.21.128.40:~/deploy/svc/
-
-      - name: Copy docker-compose.yml
-        run: |
-          scp -o StrictHostKeyChecking=no docker-compose.yml ubuntu@51.21.128.40:~/deploy/
-
-      - name: Deploy services on EC2 using docker-compose
-        run: |
-          ssh -o StrictHostKeyChecking=no ubuntu@51.21.128.40<< 'EOF'
+          ssh -o StrictHostKeyChecking=no ubuntu@51.21.128.40 << 'EOF'
             cd ~/deploy
+            if [ -d Chanakya-dev ]; then
+              cd Chanakya-dev && git reset --hard && git pull
+            else
+              git clone https://github.com/your-github-username/Chanakya-dev.git
+            fi
+          EOF
+
+      - name: Deploy using docker-compose on EC2
+        run: |
+          ssh -o StrictHostKeyChecking=no ubuntu@51.21.128.40 << 'EOF'
+            cd ~/deploy/Chanakya-dev
             if ! command -v docker >/dev/null 2>&1; then
               sudo apt update
               sudo apt install -y docker.io docker-compose
