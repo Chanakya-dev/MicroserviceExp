@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout code
         uses: actions/checkout@v3
 
       - name: Setup SSH agent
@@ -18,34 +18,13 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
 
-      - name: Create deployment directory on EC2
+      - name: Deploy to EC2
         run: |
-          ssh -o StrictHostKeyChecking=no ubuntu@51.21.128.40 << 'EOF'
-            mkdir -p ~/deploy
-          EOF
-
-      - name: Clone repo on EC2
-        run: |
-          ssh -o StrictHostKeyChecking=no ubuntu@51.21.128.40 << 'EOF'
-            cd ~/deploy
-            if [ -d Chanakya-dev ]; then
-              cd Chanakya-dev && git reset --hard && git pull
-            else
-              git clone https://github.com/your-github-username/Chanakya-dev.git
-            fi
-          EOF
-
-      - name: Deploy using docker-compose on EC2
-        run: |
-          ssh -o StrictHostKeyChecking=no ubuntu@51.21.128.40 << 'EOF'
-            cd ~/deploy/Chanakya-dev
-            if ! command -v docker >/dev/null 2>&1; then
-              sudo apt update
-              sudo apt install -y docker.io docker-compose
-              sudo systemctl start docker
-              sudo systemctl enable docker
-            fi
-
-            sudo docker-compose down || true
-            sudo docker-compose up -d --build
+          ssh -o StrictHostKeyChecking=no ubuntu@51.21.128.40 << EOF
+            cd ~/MicroserviceExp || git clone git@github.com:Chanakya-dev/MicroserviceExp.git
+            cd MicroserviceExp
+            git pull origin main
+            # Run your deployment commands here:
+            # For example, build and run Docker containers or run java -jar commands
+            echo "Deployment done"
           EOF
