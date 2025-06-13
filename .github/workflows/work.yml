@@ -1,12 +1,12 @@
-name: Test EC2 Connection
+name: Deploy Microservices to EC2
 
 on:
   push:
     branches:
-      - main  # or whichever branch you want to trigger on
+      - main
 
 jobs:
-  test-connection:
+  deploy:
     runs-on: ubuntu-latest
 
     steps:
@@ -18,10 +18,50 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
 
-      - name: Test SSH to EC2
+      - name: Create deployment directories on EC2
         run: |
           ssh -o StrictHostKeyChecking=no ubuntu@51.21.128.40<< 'EOF'
-            echo "✅ Successfully connected to EC2!"
-            hostname
-            uptime
+            mkdir -p ~/deploy/ApiGateway
+            mkdir -p ~/deploy/demo1
+            mkdir -p ~/deploy/demo2
+            mkdir -p ~/deploy/svc
+          EOF
+
+      - name: Copy ApiGateway files
+        run: |
+          scp -o StrictHostKeyChecking=no ApiGateway/ApiGateway/ApiGateway.jar ubuntu@51.21.128.40:~/deploy/ApiGateway/
+          scp -o StrictHostKeyChecking=no ApiGateway/ApiGateway/Dockerfile ubuntu@51.21.128.40:~/deploy/ApiGateway/
+
+      - name: Copy demo1 files
+        run: |
+          scp -o StrictHostKeyChecking=no demo1/demo1/demo1.jar ubuntu@51.21.128.40:~/deploy/demo1/
+          scp -o StrictHostKeyChecking=no demo1/demo1/Dockerfile ubuntu@51.21.128.40:~/deploy/demo1/
+
+      - name: Copy demo2 files
+        run: |
+          scp -o StrictHostKeyChecking=no demo2/demo2/demo2.jar ubuntu@51.21.128.40:~/deploy/demo2/
+          scp -o StrictHostKeyChecking=no demo2/demo2/Dockerfile ubuntu@51.21.128.40:~/deploy/demo2/
+
+      - name: Copy svc files
+        run: |
+          scp -o StrictHostKeyChecking=no svc/svc/svc.jar ubuntu@51.21.128.40:~/deploy/svc/
+          scp -o StrictHostKeyChecking=no svc/svc/Dockerfile ubuntu@51.21.128.40:~/deploy/svc/
+
+      - name: Copy docker-compose.yml
+        run: |
+          scp -o StrictHostKeyChecking=no docker-compose.yml ubuntu@51.21.128.40:~/deploy/
+
+      - name: Deploy services on EC2 using docker-compose
+        run: |
+          ssh -o StrictHostKeyChecking=no ubuntu@51.21.128.40<< 'EOF'
+            cd ~/deploy
+            if ! command -v docker >/dev/null 2>&1; then
+              sudo apt update
+              sudo apt install -y docker.io docker-compose
+              sudo systemctl start docker
+              sudo systemctl enable docker
+            fi
+
+            sudo docker-compose down || true
+            sudo docker-compose up -d --build
           EOF
