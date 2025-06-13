@@ -34,7 +34,7 @@ services:
 
   eureka-server:
     build:
-      context: ./svc/svc        # 🔄 matches your folder
+      context: ./svc/svc
       dockerfile: Dockerfile
     container_name: eureka-server
     ports:
@@ -46,7 +46,7 @@ services:
 
   user-service:
     build:
-      context: ./demo1/demo1    # 🔄 matches your folder
+      context: ./demo1
       dockerfile: Dockerfile
     container_name: user-service
     ports:
@@ -66,7 +66,7 @@ services:
 
   task-service:
     build:
-      context: ./demo2/demo2    # 🔄 matches your folder
+      context: ./demo2
       dockerfile: Dockerfile
     container_name: task-service
     ports:
@@ -86,7 +86,7 @@ services:
 
   api-gateway:
     build:
-      context: ./ApiGateway/ApiGateway   # 🔄 matches your folder
+      context: ./ApiGateway
       dockerfile: Dockerfile
     container_name: api-gateway
     ports:
