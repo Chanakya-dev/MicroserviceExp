@@ -1,0 +1,34 @@
+name: Deploy to EC2
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up SSH agent
+        uses: webfactory/ssh-agent@v0.7.0
+        with:
+          ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
+
+      - name: Copy files to EC2
+        run: |
+          rsync -avz --delete \
+          -e "ssh -o StrictHostKeyChecking=no" \
+          ./ ubuntu@51.21.128.40:/home/ubuntu/app
+
+      - name: Build + Deploy on EC2
+        run: |
+          ssh -o StrictHostKeyChecking=no ubuntu@51.21.128.40 << 'EOF'
+            cd /home/ubuntu/app
+            docker-compose down
+            docker system prune -af
+            docker-compose up -d --build
+          EOF
