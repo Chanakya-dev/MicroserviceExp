@@ -1,0 +1,27 @@
+name: Test EC2 Connection
+
+on:
+  push:
+    branches:
+      - main  # or whichever branch you want to trigger on
+
+jobs:
+  test-connection:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Setup SSH agent
+        uses: webfactory/ssh-agent@v0.7.0
+        with:
+          ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
+
+      - name: Test SSH to EC2
+        run: |
+          ssh -o StrictHostKeyChecking=no ubuntu@YOUR_EC2_PUBLIC_IP << 'EOF'
+            echo "✅ Successfully connected to EC2!"
+            hostname
+            uptime
+          EOF
