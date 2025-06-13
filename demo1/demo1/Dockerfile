@@ -5,7 +5,7 @@ FROM openjdk:17-jdk-slim
 WORKDIR /app
 
 # Copy the built JAR into the container
-COPY target/demo1-0.0.1-SNAPSHOT.jar user.jar
+COPY demo1-0.0.1-SNAPSHOT.jar user.jar
 
 # Expose the port your service runs on
 EXPOSE 8081
