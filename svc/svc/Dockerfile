@@ -8,7 +8,7 @@ WORKDIR /app
 COPY svc-0.0.1-SNAPSHOT.jar server.jar
 
 # Expose the port your service runs on
-EXPOSE 8082
+EXPOSE 8061
 
 # Start the application
 ENTRYPOINT ["java", "-jar", "server.jar"] 
