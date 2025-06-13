@@ -20,11 +20,22 @@ jobs:
 
       - name: Deploy to EC2
         run: |
-          ssh -o StrictHostKeyChecking=no ubuntu@51.21.128.40 << EOF
+          ssh -o StrictHostKeyChecking=no ubuntu@51.21.128.40 << 'EOF'
+            # Go to repo or clone if not exists
             cd ~/MicroserviceExp || git clone git@github.com:Chanakya-dev/MicroserviceExp.git
             cd MicroserviceExp
+
+            # Pull latest code
             git pull origin main
-            # Run your deployment commands here:
-            # For example, build and run Docker containers or run java -jar commands
+
+            # Stop and remove old containers if any
+            docker compose down || true
+
+            # Build Docker images
+            docker compose build
+
+            # Run containers in detached mode
+            docker compose up -d
+
             echo "Deployment done"
           EOF
