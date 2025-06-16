@@ -1,0 +1,79 @@
+server:
+  port: 8082
+
+spring:
+  application:
+    name: task-service
+
+  datasource:
+    url: jdbc:mysql://localhost:3306/tasks
+    username: root
+    password: Manas@2003
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    database-platform: org.hibernate.dialect.MySQL8Dialect
+
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      group-id: task-service
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+
+  redis:
+    host: localhost
+    port: 6379
+    # password: your_redis_password_if_any
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka
+  instance:
+    prefer-ip-address: true
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      taskServiceCB:
+        registerHealthIndicator: true
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 5
+        failureRateThreshold: 50
+        waitDurationInOpenState: 15s
+
+  timelimiter:
+    instances:
+      taskServiceCB:
+        timeout-duration: 5s
+
+  ratelimiter:
+    instances:
+      taskServiceRL:
+        limit-for-period: 3          # max 3 calls per refresh period
+        limit-refresh-period: 1s      # refresh period of 1 second
+        timeout-duration: 0ms         # no wait for permit
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, metrics, circuitbreakers, ratelimiters
+
+  endpoint:
+    health:
+      show-details: always
+
+logging:
+  level:
+    io.github.resilience4j.ratelimiter: DEBUG
+    io.github.resilience4j.circuitbreaker: DEBUG
+    io.github.resilience4j.timelimiter: DEBUG

@@ -1,50 +1,48 @@
-version: '3.8'
-
 services:
-  zookeeper:
-    image: bitnami/zookeeper:3.8
-    container_name: zookeeper
-    ports:
-      - "2181:2181"
-    environment:
-      - ALLOW_ANONYMOUS_LOGIN=yes
 
   kafka:
     image: bitnami/kafka:3.4.0
     container_name: kafka
+    volumes:
+      - kraft-data:/bitnami/kafka
     ports:
       - "9092:9092"
+      - "9093:9093"
     environment:
+      - KAFKA_CFG_NODE_ID=1
+      - KAFKA_CFG_PROCESS_ROLES=broker,controller
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=1@kafka:9093
       - KAFKA_BROKER_ID=1
-      - KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181
       - ALLOW_PLAINTEXT_LISTENER=yes
-      - KAFKA_LISTENERS=PLAINTEXT://:9092
-      - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092
-    depends_on:
-      - zookeeper
 
-  mysql:
-    image: mysql:8.0
-    container_name: mysql
-    environment:
-      MYSQL_ROOT_PASSWORD: Manas@2003
+  redis:
+    image: redis:7.2-alpine
+    container_name: redis
     ports:
-      - "3306:3306"
+      - "6379:6379"
     volumes:
-      - mysql-data:/var/lib/mysql
-    command: --default-authentication-plugin=mysql_native_password
+      - redis-data:/data
+    command: ["redis-server", "--requirepass", "Manas@2003"]
+    environment:
+      - TZ=UTC
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "Manas@2003", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
 
   eureka-server:
     build:
-      context: ./svc/svc
+      context: ./service/service
       dockerfile: Dockerfile
     container_name: eureka-server
     ports:
       - "8761:8761"
     depends_on:
       - kafka
-      - zookeeper
-      - mysql
 
   user-service:
     build:
@@ -54,17 +52,19 @@ services:
     ports:
       - "8081:8081"
     depends_on:
-      - eureka-server
-      - kafka
-      - zookeeper
-      - mysql
+      eureka-server:
+        condition: service_started
+      kafka:
+        condition: service_started
     environment:
-      - SPRING_PROFILES_ACTIVE=prod
-      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/users
-      - SPRING_DATASOURCE_USERNAME=root
-      - SPRING_DATASOURCE_PASSWORD=Manas@2003
-      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
-      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka
+      SPRING_PROFILES_ACTIVE: prod
+      SPRING_APPLICATION_NAME: user-service
+      SPRING_DATASOURCE_URL: jdbc:mysql://host.docker.internal:3306/users
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: Manas@2003
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      # Removed Redis config here
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka
 
   task-service:
     build:
@@ -74,17 +74,23 @@ services:
     ports:
       - "8082:8082"
     depends_on:
-      - eureka-server
-      - kafka
-      - zookeeper
-      - mysql
+      eureka-server:
+        condition: service_started
+      kafka:
+        condition: service_started
+      redis:
+        condition: service_healthy
     environment:
-      - SPRING_PROFILES_ACTIVE=prod
-      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/tasks
-      - SPRING_DATASOURCE_USERNAME=root
-      - SPRING_DATASOURCE_PASSWORD=Manas@2003
-      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
-      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka
+      SPRING_PROFILES_ACTIVE: prod
+      SPRING_APPLICATION_NAME: task-service
+      SPRING_DATASOURCE_URL: jdbc:mysql://host.docker.internal:3306/tasks
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: Manas@2003
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      SPRING_REDIS_HOST: redis
+      SPRING_REDIS_PORT: 6379
+      SPRING_REDIS_PASSWORD: Manas@2003
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka
 
   api-gateway:
     build:
@@ -97,11 +103,11 @@ services:
       - eureka-server
       - user-service
       - task-service
-      - kafka
-      - zookeeper
     environment:
-      - SPRING_PROFILES_ACTIVE=prod
-      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka
+      SPRING_PROFILES_ACTIVE: prod
+      SPRING_APPLICATION_NAME: api-gateway
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka
 
 volumes:
-  mysql-data:
+  kraft-data:
+  redis-data:

@@ -1,0 +1,78 @@
+server:
+  port: 8082
+
+spring:
+  application:
+    name: task-service
+
+  datasource:
+    url: jdbc:mysql://mysql:3306/tasks
+    username: root
+    password: Manas@2003
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate          # Production: Validate schema rather than update
+    show-sql: false               # Disable SQL logs in production
+    database-platform: org.hibernate.dialect.MySQL8Dialect
+
+  kafka:
+    bootstrap-servers: kafka:9092
+    consumer:
+      group-id: task-service
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+
+  redis:
+    host: redis                # Use your Redis server hostname or IP
+    port: 6379
+    password: Manas@2003  # Set your Redis AUTH password
+    timeout: 5000                      # 5 seconds connection timeout
+    lettuce:
+      pool:
+        max-active: 50                 # Max active connections
+        max-idle: 20                   # Max idle connections
+        min-idle: 5                    # Min idle connections
+        max-wait: 1000                 # 1 second max wait for connection
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://eureka-server:8761/eureka
+  instance:
+    prefer-ip-address: true
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      taskServiceCB:
+        registerHealthIndicator: true
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 5
+        failureRateThreshold: 50
+        waitDurationInOpenState: 15s
+
+  timelimiter:
+    instances:
+      taskServiceCB:
+        timeout-duration: 5s
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, metrics, circuitbreakers
+
+  endpoint:
+    health:
+      show-details: always
+
+logging:
+  level:
+    io.github.resilience4j.circuitbreaker: INFO
+    io.github.resilience4j.timelimiter: INFO

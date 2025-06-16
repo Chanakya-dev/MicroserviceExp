@@ -11,4 +11,4 @@ COPY demo2-0.0.1-SNAPSHOT.jar task.jar
 EXPOSE 8082
 
 # Start the application
-ENTRYPOINT ["java", "-jar", "task.jar"] 
+ENTRYPOINT ["java", "-jar", "task.jar","--spring.profiles.active=prod"] 

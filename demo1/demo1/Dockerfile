@@ -10,5 +10,5 @@ COPY demo1-0.0.1-SNAPSHOT.jar user.jar
 # Expose the port your service runs on
 EXPOSE 8081
 
-# Start the application
-ENTRYPOINT ["java", "-jar", "user.jar"] 
+# Run with prod profile
+ENTRYPOINT ["java", "-jar", "user.jar", "--spring.profiles.active=prod"]
