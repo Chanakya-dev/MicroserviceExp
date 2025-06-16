@@ -18,17 +18,22 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
 
-      - name: Copy files to EC2
+      - name: Copy Docker build folders and docker-compose.yml to EC2
         run: |
-          rsync -avz --delete \
-          -e "ssh -o StrictHostKeyChecking=no" \
-          ./ ubuntu@51.21.128.40:/home/ubuntu/app
+          rsync -avz -e "ssh -o StrictHostKeyChecking=no" \
+            ./demo1/demo1/ ubuntu@13.61.17.208:/home/ubuntu/app/demo1/demo1/
+          rsync -avz -e "ssh -o StrictHostKeyChecking=no" \
+            ./demo2/demo2/ ubuntu@13.61.17.208:/home/ubuntu/app/demo2/demo2/
+          rsync -avz -e "ssh -o StrictHostKeyChecking=no" \
+            ./ApiGateway/ApiGateway/ ubuntu@13.61.17.208:/home/ubuntu/app/ApiGateway/ApiGateway/
+          rsync -avz -e "ssh -o StrictHostKeyChecking=no" \
+            ./service/service/ ubuntu@13.61.17.208:/home/ubuntu/app/service/service/
+          rsync -avz -e "ssh -o StrictHostKeyChecking=no" \
+            ./docker-compose.yml ubuntu@13.61.17.208:/home/ubuntu/app/
 
-      - name: Build + Deploy on EC2
+      - name: Build and deploy Docker containers on EC2
         run: |
-          ssh -o StrictHostKeyChecking=no ubuntu@51.21.128.40 << 'EOF'
+          ssh -o StrictHostKeyChecking=no ubuntu@13.61.17.208 << 'EOF'
             cd /home/ubuntu/app
-            docker-compose down
-            docker system prune -af
             docker-compose up -d --build
           EOF
