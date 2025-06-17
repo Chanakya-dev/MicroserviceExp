@@ -20,7 +20,7 @@ jobs:
 
       - name: Create remote directories on EC2
         run: |
-          ssh -o StrictHostKeyChecking=no ubuntu@13.61.17.208 << 'EOF'
+          ssh -o StrictHostKeyChecking=no ubuntu@51.21.254.166 << 'EOF'
             mkdir -p /home/ubuntu/app/demo1/demo1
             mkdir -p /home/ubuntu/app/demo2/demo2
             mkdir -p /home/ubuntu/app/ApiGateway/ApiGateway
@@ -29,23 +29,23 @@ jobs:
 
       - name: Rsync demo1/demo1 to EC2
         run: |
-          rsync -avz --delete -e "ssh -o StrictHostKeyChecking=no" ./demo1/demo1/ ubuntu@13.61.17.208:/home/ubuntu/app/demo1/demo1/
+          rsync -avz --delete -e "ssh -o StrictHostKeyChecking=no" ./demo1/demo1/ ubuntu@51.21.254.166:/home/ubuntu/app/demo1/demo1/
 
       - name: Rsync demo2/demo2 to EC2
         run: |
-          rsync -avz --delete -e "ssh -o StrictHostKeyChecking=no" ./demo2/demo2/ ubuntu@13.61.17.208:/home/ubuntu/app/demo2/demo2/
+          rsync -avz --delete -e "ssh -o StrictHostKeyChecking=no" ./demo2/demo2/ ubuntu@51.21.254.166:/home/ubuntu/app/demo2/demo2/
 
       - name: Rsync ApiGateway to EC2
         run: |
-          rsync -avz --delete -e "ssh -o StrictHostKeyChecking=no" ./ApiGateway/ApiGateway/ ubuntu@13.61.17.208:/home/ubuntu/app/ApiGateway/ApiGateway/
+          rsync -avz --delete -e "ssh -o StrictHostKeyChecking=no" ./ApiGateway/ApiGateway/ ubuntu@51.21.254.166:/home/ubuntu/app/ApiGateway/ApiGateway/
 
       - name: Rsync service/service to EC2
         run: |
-          rsync -avz --delete -e "ssh -o StrictHostKeyChecking=no" ./service/service/ ubuntu@13.61.17.208:/home/ubuntu/app/service/service/
+          rsync -avz --delete -e "ssh -o StrictHostKeyChecking=no" ./service/service/ ubuntu@51.21.254.166:/home/ubuntu/app/service/service/
 
       - name: Rsync docker-compose.yml to EC2
         run: |
-          rsync -avz -e "ssh -o StrictHostKeyChecking=no" ./docker-compose.yml ubuntu@13.61.17.208:/home/ubuntu/app/
+          rsync -avz -e "ssh -o StrictHostKeyChecking=no" ./docker-compose.yml ubuntu@51.21.254.166:/home/ubuntu/app/
 
       - name: Deploy containers on EC2
         run: |
