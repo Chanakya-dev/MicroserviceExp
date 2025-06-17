@@ -14,7 +14,7 @@ public class AuthController {
     @Autowired
     private JwtUtil jwtUtil;
 
-    private final String USER_SERVICE_URL = "http://localhost:8081/api/cvc/validate";
+    private final String USER_SERVICE_URL = "http://user-service:8081/api/cvc/validate";
 
 
     @PostMapping("/login")
