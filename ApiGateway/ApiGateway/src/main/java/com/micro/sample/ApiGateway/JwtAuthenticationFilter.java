@@ -30,7 +30,7 @@ public class JwtAuthenticationFilter extends AbstractGatewayFilterFactory<JwtAut
         return (exchange, chain) -> {
             String path = exchange.getRequest().getPath().toString();
 
-            if (path.contains("/auth/login") || path.contains("/auth/register")) {
+            if (path.contains("/auth/login") || path.contains("/api/cvc/register")) {
                 return chain.filter(exchange);
             }
 
