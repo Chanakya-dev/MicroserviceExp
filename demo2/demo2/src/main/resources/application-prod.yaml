@@ -13,9 +13,9 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: validate          # Production: Validate schema rather than update
-    show-sql: false               # Disable SQL logs in production
-    database-platform: org.hibernate.dialect.MySQL8Dialect
+      ddl-auto: update
+    show-sql: true
+    database-platform: org.hibernate.dialect.MySQLDialect
 
   kafka:
     bootstrap-servers: kafka:9092
@@ -29,21 +29,23 @@ spring:
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
 
   redis:
-    host: redis                # Use your Redis server hostname or IP
+    host: redis
     port: 6379
-    password: Manas@2003  # Set your Redis AUTH password
-    timeout: 5000                      # 5 seconds connection timeout
+    password: Manas@2003
+    timeout: 5000
     lettuce:
       pool:
-        max-active: 50                 # Max active connections
-        max-idle: 20                   # Max idle connections
-        min-idle: 5                    # Min idle connections
-        max-wait: 1000                 # 1 second max wait for connection
+        max-active: 50
+        max-idle: 20
+        min-idle: 5
+        max-wait: 1000
 
 eureka:
   client:
     service-url:
       defaultZone: http://eureka-server:8761/eureka
+    register-with-eureka: true
+    fetch-registry: true
   instance:
     prefer-ip-address: true
 
