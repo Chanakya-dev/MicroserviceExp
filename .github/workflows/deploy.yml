@@ -25,7 +25,6 @@ jobs:
             mkdir -p /home/ubuntu/app/demo2/demo2
             mkdir -p /home/ubuntu/app/ApiGateway/ApiGateway
             mkdir -p /home/ubuntu/app/service/service
-            mkdir -p /home/ubuntu/app/checksums
           EOF
 
       - name: Rsync code to EC2
@@ -36,37 +35,27 @@ jobs:
           rsync -avz --delete -e "ssh -o StrictHostKeyChecking=no" ./service/service/ ubuntu@51.21.50.201:/home/ubuntu/app/service/service/
           rsync -avz -e "ssh -o StrictHostKeyChecking=no" ./docker-compose.yml ubuntu@51.21.50.201:/home/ubuntu/app/
 
-      - name: Deploy changed containers
+      - name: Redeploy recently updated services
         run: |
           ssh -o StrictHostKeyChecking=no ubuntu@51.21.50.201 << EOF
             cd /home/ubuntu/app
 
-            check_and_deploy() {
-              SERVICE=$1
-              DIR=$2
-              HASH_FILE="/home/ubuntu/app/checksums/${SERVICE}.sha256"
+            redeploy_if_updated() {
+              SERVICE=\$1
+              DIR=\$2
 
-              NEW_HASH=$(find "$DIR" -type f -exec sha256sum {} + | sort | sha256sum | awk '{print $1}')
-
-              if [ -f "$HASH_FILE" ]; then
-                OLD_HASH=$(cat "$HASH_FILE")
+              if find "\$DIR" -type f -mmin -30 | grep -q .; then
+                echo "Files updated in last 30 mins for \$SERVICE. Redeploying..."
+                docker-compose rm -fs \$SERVICE
+                docker-compose build \$SERVICE
+                docker-compose up -d \$SERVICE
               else
-                OLD_HASH=""
-              fi
-
-              if [ "$NEW_HASH" != "$OLD_HASH" ]; then
-                echo "Changes detected in $SERVICE. Redeploying..."
-                echo "$NEW_HASH" > "$HASH_FILE"
-                docker-compose rm -fs $SERVICE
-                docker-compose build $SERVICE
-                docker-compose up -d $SERVICE
-              else
-                echo "No changes in $SERVICE. Skipping."
+                echo "No recent updates in \$SERVICE. Skipping."
               fi
             }
 
-            check_and_deploy user-service demo1/demo1
-            check_and_deploy task-service demo2/demo2
-            check_and_deploy api-gateway ApiGateway/ApiGateway
-            check_and_deploy eureka-server service/service
+            redeploy_if_updated user-service demo1/demo1
+            redeploy_if_updated task-service demo2/demo2
+            redeploy_if_updated api-gateway ApiGateway/ApiGateway
+            redeploy_if_updated eureka-server service/service
           EOF
