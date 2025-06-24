@@ -35,27 +35,12 @@ jobs:
           rsync -avz --delete -e "ssh -o StrictHostKeyChecking=no" ./service/service/ ubuntu@51.21.50.201:/home/ubuntu/app/service/service/
           rsync -avz -e "ssh -o StrictHostKeyChecking=no" ./docker-compose.yml ubuntu@51.21.50.201:/home/ubuntu/app/
 
-      - name: Redeploy recently updated services
+      - name: Redeploy all services
         run: |
           ssh -o StrictHostKeyChecking=no ubuntu@51.21.50.201 << EOF
             cd /home/ubuntu/app
-
-            redeploy_if_updated() {
-              SERVICE=\$1
-              DIR=\$2
-
-              if find "\$DIR" -type f -mmin -30 | grep -q .; then
-                echo "Files updated in last 30 mins for \$SERVICE. Redeploying..."
-                docker-compose rm -fs \$SERVICE
-                docker-compose build \$SERVICE
-                docker-compose up -d \$SERVICE
-              else
-                echo "No recent updates in \$SERVICE. Skipping."
-              fi
-            }
-
-            redeploy_if_updated user-service demo1/demo1
-            redeploy_if_updated task-service demo2/demo2
-            redeploy_if_updated api-gateway ApiGateway/ApiGateway
-            redeploy_if_updated eureka-server service/service
+            echo "Stopping all running containers..."
+            docker-compose down
+            echo "Rebuilding and starting all services..."
+            docker-compose up -d --build
           EOF
