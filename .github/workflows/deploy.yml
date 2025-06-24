@@ -37,7 +37,7 @@ jobs:
 
       - name: Redeploy all services
         run: |
-          ssh -o StrictHostKeyChecking=no ubuntu@51.21.50.201 << EOF
+          ssh -o StrictHostKeyChecking=no ubuntu@13.50.53.138 << EOF
             cd /home/ubuntu/app
             echo "Stopping all running containers..."
             docker-compose down
