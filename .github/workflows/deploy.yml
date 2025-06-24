@@ -20,7 +20,7 @@ jobs:
 
       - name: Create remote directories on EC2
         run: |
-          ssh -o StrictHostKeyChecking=no ubuntu@51.21.50.201 << EOF
+          ssh -o StrictHostKeyChecking=no ubuntu@13.50.53.138 << EOF
             mkdir -p /home/ubuntu/app/demo1/demo1
             mkdir -p /home/ubuntu/app/demo2/demo2
             mkdir -p /home/ubuntu/app/ApiGateway/ApiGateway
@@ -29,11 +29,11 @@ jobs:
 
       - name: Rsync code to EC2
         run: |
-          rsync -avz --delete -e "ssh -o StrictHostKeyChecking=no" ./demo1/demo1/ ubuntu@51.21.50.201:/home/ubuntu/app/demo1/demo1/
-          rsync -avz --delete -e "ssh -o StrictHostKeyChecking=no" ./demo2/demo2/ ubuntu@51.21.50.201:/home/ubuntu/app/demo2/demo2/
-          rsync -avz --delete -e "ssh -o StrictHostKeyChecking=no" ./ApiGateway/ApiGateway/ ubuntu@51.21.50.201:/home/ubuntu/app/ApiGateway/ApiGateway/
-          rsync -avz --delete -e "ssh -o StrictHostKeyChecking=no" ./service/service/ ubuntu@51.21.50.201:/home/ubuntu/app/service/service/
-          rsync -avz -e "ssh -o StrictHostKeyChecking=no" ./docker-compose.yml ubuntu@51.21.50.201:/home/ubuntu/app/
+          rsync -avz --delete -e "ssh -o StrictHostKeyChecking=no" ./demo1/demo1/ ubuntu@13.50.53.138:/home/ubuntu/app/demo1/demo1/
+          rsync -avz --delete -e "ssh -o StrictHostKeyChecking=no" ./demo2/demo2/ ubuntu@13.50.53.138:/home/ubuntu/app/demo2/demo2/
+          rsync -avz --delete -e "ssh -o StrictHostKeyChecking=no" ./ApiGateway/ApiGateway/ ubuntu@13.50.53.138:/home/ubuntu/app/ApiGateway/ApiGateway/
+          rsync -avz --delete -e "ssh -o StrictHostKeyChecking=no" ./service/service/ ubuntu@13.50.53.138:/home/ubuntu/app/service/service/
+          rsync -avz -e "ssh -o StrictHostKeyChecking=no" ./docker-compose.yml ubuntu@13.50.53.138:/home/ubuntu/app/
 
       - name: Redeploy all services
         run: |
