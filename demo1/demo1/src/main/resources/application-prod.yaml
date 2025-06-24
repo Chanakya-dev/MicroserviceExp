@@ -3,12 +3,12 @@ server:
 
 spring:
   application:
-    name: user-service    # Changed to match API Gateway routing
+    name: user-service
 
   datasource:
-    url: jdbc:mysql://mysql:3306/users
-    username: root
-    password: Manas@2003
+    url: jdbc:mysql://test-app.c7e42wekkhl4.eu-north-1.rds.amazonaws.com:3306/users
+    username: admin
+    password: Manas2003
     driver-class-name: com.mysql.cj.jdbc.Driver
 
   jpa:
@@ -18,7 +18,7 @@ spring:
     database-platform: org.hibernate.dialect.MySQLDialect
 
   kafka:
-    bootstrap-servers: kafka:9092    # Use kafka as hostname (Docker service)
+    bootstrap-servers: kafka:9092
     consumer:
       group-id: user-service
       auto-offset-reset: earliest
@@ -31,6 +31,6 @@ spring:
 eureka:
   client:
     service-url:
-      defaultZone: http://eureka-server:8761/eureka  # Use eureka-server as hostname
+      defaultZone: http://eureka-server:8761/eureka
     register-with-eureka: true
     fetch-registry: true

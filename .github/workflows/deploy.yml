@@ -20,37 +20,55 @@ jobs:
 
       - name: Create remote directories on EC2
         run: |
-          ssh -o StrictHostKeyChecking=no ubuntu@51.21.254.166 << 'EOF'
+          ssh -o StrictHostKeyChecking=no ubuntu@51.21.50.201 << 'EOF'
             mkdir -p /home/ubuntu/app/demo1/demo1
             mkdir -p /home/ubuntu/app/demo2/demo2
             mkdir -p /home/ubuntu/app/ApiGateway/ApiGateway
             mkdir -p /home/ubuntu/app/service/service
+            mkdir -p /home/ubuntu/app/checksums
           EOF
 
-      - name: Rsync demo1/demo1 to EC2
+      - name: Rsync code to EC2
         run: |
-          rsync -avz --delete -e "ssh -o StrictHostKeyChecking=no" ./demo1/demo1/ ubuntu@51.21.254.166:/home/ubuntu/app/demo1/demo1/
+          rsync -avz --delete -e "ssh -o StrictHostKeyChecking=no" ./demo1/demo1/ ubuntu@51.21.50.201:/home/ubuntu/app/demo1/demo1/
+          rsync -avz --delete -e "ssh -o StrictHostKeyChecking=no" ./demo2/demo2/ ubuntu@51.21.50.201:/home/ubuntu/app/demo2/demo2/
+          rsync -avz --delete -e "ssh -o StrictHostKeyChecking=no" ./ApiGateway/ApiGateway/ ubuntu@51.21.50.201:/home/ubuntu/app/ApiGateway/ApiGateway/
+          rsync -avz --delete -e "ssh -o StrictHostKeyChecking=no" ./service/service/ ubuntu@51.21.50.201:/home/ubuntu/app/service/service/
+          rsync -avz -e "ssh -o StrictHostKeyChecking=no" ./docker-compose.yml ubuntu@51.21.50.201:/home/ubuntu/app/
 
-      - name: Rsync demo2/demo2 to EC2
+      - name: Deploy changed containers
         run: |
-          rsync -avz --delete -e "ssh -o StrictHostKeyChecking=no" ./demo2/demo2/ ubuntu@51.21.254.166:/home/ubuntu/app/demo2/demo2/
-
-      - name: Rsync ApiGateway to EC2
-        run: |
-          rsync -avz --delete -e "ssh -o StrictHostKeyChecking=no" ./ApiGateway/ApiGateway/ ubuntu@51.21.254.166:/home/ubuntu/app/ApiGateway/ApiGateway/
-
-      - name: Rsync service/service to EC2
-        run: |
-          rsync -avz --delete -e "ssh -o StrictHostKeyChecking=no" ./service/service/ ubuntu@51.21.254.166:/home/ubuntu/app/service/service/
-
-      - name: Rsync docker-compose.yml to EC2
-        run: |
-          rsync -avz -e "ssh -o StrictHostKeyChecking=no" ./docker-compose.yml ubuntu@51.21.254.166:/home/ubuntu/app/
-
-      - name: Deploy containers on EC2
-        run: |
-          ssh -o StrictHostKeyChecking=no ubuntu@51.21.254.166 << 'EOF'
+          ssh -o StrictHostKeyChecking=no ubuntu@51.21.50.201 << 'EOF'
             cd /home/ubuntu/app
-            docker-compose down
-            docker-compose up -d --build
+
+            # Function to compute checksum and compare
+            check_and_deploy() {
+              SERVICE=$1
+              DIR=$2
+              HASH_FILE="/home/ubuntu/app/checksums/${SERVICE}.sha256"
+
+              NEW_HASH=\$(find "\$DIR" -type f -exec sha256sum {} + | sort | sha256sum | awk '{print \$1}')
+
+              if [ -f "\$HASH_FILE" ]; then
+                OLD_HASH=\$(cat "\$HASH_FILE")
+              else
+                OLD_HASH=""
+              fi
+
+              if [ "\$NEW_HASH" != "\$OLD_HASH" ]; then
+                echo "Changes detected in \$SERVICE. Redeploying..."
+                echo "\$NEW_HASH" > "\$HASH_FILE"
+                docker-compose rm -fs \$SERVICE
+                docker-compose build \$SERVICE
+                docker-compose up -d \$SERVICE
+              else
+                echo "No changes in \$SERVICE. Skipping."
+              fi
+            }
+
+            # Check each service
+            check_and_deploy user-service demo1/demo1
+            check_and_deploy task-service demo2/demo2
+            check_and_deploy api-gateway ApiGateway/ApiGateway
+            check_and_deploy eureka-server service/service
           EOF

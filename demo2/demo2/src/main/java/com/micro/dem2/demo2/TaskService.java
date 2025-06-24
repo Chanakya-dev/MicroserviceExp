@@ -112,29 +112,40 @@ public class TaskService {
     }
 
     public Task createTask(Task task, String username) {
-        try {
-            String requestId = UUID.randomUUID().toString();
-            Map<String, String> payload = Map.of("requestId", requestId, "username", username);
-            String message = objectMapper.writeValueAsString(payload);
+    try {
+        String requestId = UUID.randomUUID().toString();
+        Map<String, String> payload = Map.of("requestId", requestId, "username", username);
+        String message = objectMapper.writeValueAsString(payload);
 
-            CompletableFuture<Long> future = new CompletableFuture<>();
-            responseMap.put(requestId, future);
-            kafkaTemplate.send(USER_REQUESTS_TOPIC, message);
+        CompletableFuture<Long> future = new CompletableFuture<>();
+        responseMap.put(requestId, future);
+        kafkaTemplate.send(USER_REQUESTS_TOPIC, message);
 
-            Long userId = future.get(5, TimeUnit.SECONDS);
-            task.setUserId(userId);
+        Long userId = future.get(5, TimeUnit.SECONDS); // Wait up to 5s
+        task.setUserId(userId);
 
-            Task savedTask = taskRepository.save(task);
+    } catch (Exception e) {
+        // Log and proceed or return a specific response
+        System.err.println("⚠️ Kafka userId resolution failed: " + e.getMessage());
+        // Option 1: return error (current behavior)
+        // throw new RuntimeException("Failed to assign userId during task creation", e);
 
-            // Evict related Redis cache keys
-            redisTemplate.delete("tasks::" + username);
-            redisTemplate.delete("tasks::all");
-
-            return savedTask;
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to assign userId during task creation", e);
-        }
+        // Option 2: set default userId or return partial success
+        task.setUserId(0L); // or any default ID
     }
+
+    Task savedTask = taskRepository.save(task);
+
+    try {
+        redisTemplate.delete("tasks::" + username);
+        redisTemplate.delete("tasks::all");
+    } catch (Exception e) {
+        System.err.println("⚠️ Redis eviction failed: " + e.getMessage());
+    }
+
+    return savedTask;
+}
+
 
     public Task updateTask(Long id, Task updatedTask) {
         Task existing = taskRepository.findById(id).orElseThrow();

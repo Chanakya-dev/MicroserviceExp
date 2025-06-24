@@ -1,21 +1,5 @@
 services:
 
-  mysql:
-    image: mysql:8.0
-    container_name: mysql
-    environment:
-      MYSQL_ROOT_PASSWORD: Manas@2003
-      MYSQL_DATABASE: users
-    ports:
-      - "3306:3306"
-    volumes:
-      - mysql-data:/var/lib/mysql
-    healthcheck:
-      test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
   kafka:
     image: bitnami/kafka:3.4.0
     container_name: kafka
@@ -59,7 +43,6 @@ services:
       - "8761:8761"
     depends_on:
       - kafka
-      - mysql
 
   user-service:
     build:
@@ -73,16 +56,10 @@ services:
         condition: service_started
       kafka:
         condition: service_started
-      mysql:
-        condition: service_healthy
     environment:
       SPRING_PROFILES_ACTIVE: prod
       SPRING_APPLICATION_NAME: user-service
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/users
-      SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: Manas@2003
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-      # Removed Redis config here
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka
 
   task-service:
@@ -99,14 +76,9 @@ services:
         condition: service_started
       redis:
         condition: service_healthy
-      mysql:
-        condition: service_healthy
     environment:
       SPRING_PROFILES_ACTIVE: prod
       SPRING_APPLICATION_NAME: task-service
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/tasks
-      SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: Manas@2003
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       SPRING_REDIS_HOST: redis
       SPRING_REDIS_PORT: 6379
@@ -132,4 +104,3 @@ services:
 volumes:
   kraft-data:
   redis-data:
-  mysql-data:

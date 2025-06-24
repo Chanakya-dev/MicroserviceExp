@@ -6,9 +6,9 @@ spring:
     name: task-service
 
   datasource:
-    url: jdbc:mysql://mysql:3306/tasks
-    username: root
-    password: Manas@2003
+    url: jdbc:mysql://test-app.c7e42wekkhl4.eu-north-1.rds.amazonaws.com:3306/tasks
+    username: admin
+    password: Manas2003
     driver-class-name: com.mysql.cj.jdbc.Driver
 
   jpa:
