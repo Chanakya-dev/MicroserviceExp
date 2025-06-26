@@ -1,9 +1,12 @@
-name: Deploy to EC2
+name: CI/CD to ECR & EKS + Deploy Kafka & Redis
 
 on:
   push:
-    branches:
-      - main
+    branches: [ main ]
+
+env:
+  AWS_ACCOUNT_ID: 643208527492
+  AWS_REGION: us-east-1
 
 jobs:
   deploy:
@@ -13,34 +16,52 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Set up SSH agent
-        uses: webfactory/ssh-agent@v0.7.0
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
         with:
-          ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
 
-      - name: Create remote directories on EC2
-        run: |
-          ssh -o StrictHostKeyChecking=no ubuntu@13.50.53.138 << EOF
-            mkdir -p /home/ubuntu/app/demo1/demo1
-            mkdir -p /home/ubuntu/app/demo2/demo2
-            mkdir -p /home/ubuntu/app/ApiGateway/ApiGateway
-            mkdir -p /home/ubuntu/app/service/service
-          EOF
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v1
 
-      - name: Rsync code to EC2
+      - name: Setup kubectl and helm
         run: |
-          rsync -avz --delete -e "ssh -o StrictHostKeyChecking=no" ./demo1/demo1/ ubuntu@13.50.53.138:/home/ubuntu/app/demo1/demo1/
-          rsync -avz --delete -e "ssh -o StrictHostKeyChecking=no" ./demo2/demo2/ ubuntu@13.50.53.138:/home/ubuntu/app/demo2/demo2/
-          rsync -avz --delete -e "ssh -o StrictHostKeyChecking=no" ./ApiGateway/ApiGateway/ ubuntu@13.50.53.138:/home/ubuntu/app/ApiGateway/ApiGateway/
-          rsync -avz --delete -e "ssh -o StrictHostKeyChecking=no" ./service/service/ ubuntu@13.50.53.138:/home/ubuntu/app/service/service/
-          rsync -avz -e "ssh -o StrictHostKeyChecking=no" ./docker-compose.yml ubuntu@13.50.53.138:/home/ubuntu/app/
+          curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+          chmod +x kubectl
+          sudo mv kubectl /usr/local/bin/
 
-      - name: Redeploy all services
+          curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+
+      - name: Update kubeconfig for EKS
         run: |
-          ssh -o StrictHostKeyChecking=no ubuntu@13.50.53.138 << EOF
-            cd /home/ubuntu/app
-            echo "Stopping all running containers..."
-            docker-compose down
-            echo "Rebuilding and starting all services..."
-            docker-compose up -d --build
-          EOF
+          aws eks update-kubeconfig --name ${{ secrets.EKS_CLUSTER_NAME }} --region us-east-1
+
+      - name: Deploy Redis via Helm
+        run: |
+          helm repo add bitnami https://charts.bitnami.com/bitnami
+          helm repo update
+          helm upgrade --install my-redis bitnami/redis --set architecture=standalone
+
+      - name: Deploy Kafka via Helm
+        run: |
+          helm upgrade --install my-kafka bitnami/kafka
+
+      - name: Build, Push & Deploy Microservices
+        run: |
+          SERVICES=(user-service task-service api-gateway eureka-server)
+
+          for SERVICE in "${SERVICES[@]}"; do
+            echo "🔨 Building $SERVICE..."
+            docker build -t $SERVICE ./$SERVICE
+
+            echo "🏷 Tagging $SERVICE for ECR..."
+            docker tag $SERVICE:latest ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.us-east-1.amazonaws.com/$SERVICE:latest
+
+            echo "🚀 Pushing $SERVICE to ECR..."
+            docker push ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.us-east-1.amazonaws.com/$SERVICE:latest
+
+            echo "☸️ Deploying $SERVICE to EKS..."
+            kubectl apply -f ./$SERVICE/deployment.yaml
+          done
