@@ -41,6 +41,16 @@ jobs:
         run: |
           aws eks update-kubeconfig --name ${{ secrets.EKS_CLUSTER_NAME }} --region ${{ env.AWS_REGION }}
 
+      - name: 🗑️ Uninstall existing Redis and Kafka Helm releases
+        run: |
+          helm uninstall my-redis || true
+          helm uninstall my-kafka || true
+
+      - name: 🗑️ Delete microservices deployments and services if exist
+        run: |
+          kubectl delete deployment user-service task-service api-gateway eureka-server --ignore-not-found
+          kubectl delete service user-service task-service api-gateway eureka-server --ignore-not-found
+
       - name: 📦 Deploy Redis via Helm (No Persistence)
         run: |
           helm repo add bitnami https://charts.bitnami.com/bitnami
