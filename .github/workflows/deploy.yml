@@ -50,11 +50,17 @@ jobs:
 
       - name: Build, Push & Deploy Microservices
         run: |
-          SERVICES=(user-service task-service api-gateway eureka-server)
+          declare -A PATHS=(
+            [user-service]="demo1/demo1"
+            [task-service]="demo2/demo2"
+            [api-gateway]="ApiGateway/ApiGateway"
+            [eureka-server]="service/service"
+          )
 
-          for SERVICE in "${SERVICES[@]}"; do
-            echo "🔨 Building $SERVICE..."
-            docker build -t $SERVICE ./$SERVICE
+          for SERVICE in "${!PATHS[@]}"; do
+            CONTEXT="${PATHS[$SERVICE]}"
+            echo "🔨 Building $SERVICE from $CONTEXT..."
+            docker build -t $SERVICE $CONTEXT
 
             echo "🏷 Tagging $SERVICE for ECR..."
             docker tag $SERVICE:latest ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.us-east-1.amazonaws.com/$SERVICE:latest
@@ -63,5 +69,5 @@ jobs:
             docker push ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.us-east-1.amazonaws.com/$SERVICE:latest
 
             echo "☸️ Deploying $SERVICE to EKS..."
-            kubectl apply -f ./$SERVICE/deployment.yaml
+            kubectl apply -f $CONTEXT/deployment.yaml
           done
