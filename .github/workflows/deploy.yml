@@ -29,7 +29,8 @@ jobs:
 
       - name: 🧰 Install kubectl and Helm
         run: |
-          KUBECTL_VERSION=$(curl -s https://dl.k8s.io/release/stable.txt)
+          KUBECTL_VERSION=$(curl -s https://dl.k8s.io/release/stable.txt | tr -d '\n')
+          echo "kubectl version to download: $KUBECTL_VERSION"
           curl -LO "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl"
           chmod +x kubectl
           sudo mv kubectl /usr/local/bin/
