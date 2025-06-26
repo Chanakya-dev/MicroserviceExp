@@ -7,48 +7,51 @@ on:
 env:
   AWS_ACCOUNT_ID: 643208527492
   AWS_REGION: us-east-1
+  ECR_REGISTRY: 643208527492.dkr.ecr.us-east-1.amazonaws.com
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      - name: 🛎️ Checkout code
         uses: actions/checkout@v3
 
-      - name: Configure AWS credentials
+      - name: 🔐 Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
+          aws-region: ${{ env.AWS_REGION }}
 
-      - name: Login to Amazon ECR
+      - name: 🔑 Login to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v1
 
-      - name: Setup kubectl and helm
+      - name: 🧰 Install kubectl and Helm
         run: |
-          curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-          chmod +x kubectl
-          sudo mv kubectl /usr/local/bin/
-
+          curl -LO "https://dl.k8s.io/release/$(curl -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+          chmod +x kubectl && sudo mv kubectl /usr/local/bin/
+          
           curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
 
-      - name: Update kubeconfig for EKS
+      - name: 🔧 Update kubeconfig for EKS
         run: |
-          aws eks update-kubeconfig --name ${{ secrets.EKS_CLUSTER_NAME }} --region us-east-1
+          aws eks update-kubeconfig --name ${{ secrets.EKS_CLUSTER_NAME }} --region ${{ env.AWS_REGION }}
 
-      - name: Deploy Redis via Helm
+      - name: 📦 Deploy Redis via Helm (No Persistence)
         run: |
           helm repo add bitnami https://charts.bitnami.com/bitnami
           helm repo update
-          helm upgrade --install my-redis bitnami/redis --set architecture=standalone
+          helm upgrade --install my-redis bitnami/redis \
+            --set architecture=standalone \
+            --set master.persistence.enabled=false
 
-      - name: Deploy Kafka via Helm
+      - name: 📦 Deploy Kafka via Helm (No Persistence)
         run: |
-          helm upgrade --install my-kafka bitnami/kafka
+          helm upgrade --install my-kafka bitnami/kafka \
+            --set persistence.enabled=false
 
-      - name: Build, Push & Deploy Microservices
+      - name: 🚀 Build, Push & Deploy Microservices
         run: |
           declare -A PATHS=(
             [user-service]="demo1/demo1"
@@ -63,10 +66,10 @@ jobs:
             docker build -t $SERVICE $CONTEXT
 
             echo "🏷 Tagging $SERVICE for ECR..."
-            docker tag $SERVICE:latest ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.us-east-1.amazonaws.com/$SERVICE:latest
+            docker tag $SERVICE:latest ${{ env.ECR_REGISTRY }}/$SERVICE:latest
 
-            echo "🚀 Pushing $SERVICE to ECR..."
-            docker push ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.us-east-1.amazonaws.com/$SERVICE:latest
+            echo "📤 Pushing $SERVICE to ECR..."
+            docker push ${{ env.ECR_REGISTRY }}/$SERVICE:latest
 
             echo "☸️ Deploying $SERVICE to EKS..."
             kubectl apply -f $CONTEXT/deployment.yaml
