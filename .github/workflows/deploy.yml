@@ -5,6 +5,10 @@ on:
     branches:
       - main
 
+concurrency:
+  group: build-deploy-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   AWS_REGION: eu-north-1
   ECR_REGISTRY: 643208527492.dkr.ecr.eu-north-1.amazonaws.com
@@ -13,6 +17,7 @@ env:
 
 jobs:
   deploy-all:
+    timeout-minutes: 30
     runs-on: ubuntu-latest
     strategy:
       matrix:
