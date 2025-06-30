@@ -18,7 +18,7 @@ spring:
     database-platform: org.hibernate.dialect.MySQLDialect
 
   kafka:
-    bootstrap-servers: kafka:9092
+    bootstrap-servers: b-1.kafkatest.abcde.c5.kafka.eu-north-1.amazonaws.com:9092,b-2.kafkatest.xyzde.c5.kafka.eu-north-1.amazonaws.com:9092
     consumer:
       group-id: user-service
       auto-offset-reset: earliest
@@ -27,6 +27,11 @@ spring:
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
+
+  data:
+    redis:
+      host: redis-8yozlv.serverless.eun1.cache.amazonaws.com
+      port: 6379
 
 eureka:
   client:

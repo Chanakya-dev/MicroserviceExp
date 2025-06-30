@@ -1,89 +1,73 @@
-name: CI/CD to ECR & EKS + Deploy Kafka & Redis
+name: Build and Deploy All Services to Amazon ECS
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
 
 env:
-  AWS_ACCOUNT_ID: 643208527492
-  AWS_REGION: us-east-1
-  ECR_REGISTRY: 643208527492.dkr.ecr.us-east-1.amazonaws.com
+  AWS_REGION: eu-north-1
+  ECR_REGISTRY: 643208527492.dkr.ecr.eu-north-1.amazonaws.com
+  IMAGE_TAG: latest
+  ECS_CLUSTER: microservice-exp
 
 jobs:
-  deploy:
+  deploy-all:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - name: demo1
+            service_path: demo1/demo1
+            ecr_repository: taskmanagement/user-service
+            ecs_service: demo1
+
+          - name: demo2
+            service_path: demo2/demo2
+            ecr_repository: taskmanagement/task-service
+            ecs_service: demo2
+
+          - name: api-gateway
+            service_path: api-gateway/api-gateway
+            ecr_repository: taskmanagement/api-gateway
+            ecs_service: api-gateway
+
+          - name: eureka-server
+            service_path: eureka-server/eureka-server
+            ecr_repository: taskmanagement/eureka-server
+            ecs_service: eureka-server
+
+    name: Build & Deploy ${{ matrix.name }}
 
     steps:
-      - name: 🛎️ Checkout code
-        uses: actions/checkout@v3
+    - name: Checkout Code
+      uses: actions/checkout@v3
 
-      - name: 🔐 Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
 
-      - name: 🔑 Login to Amazon ECR
-        uses: aws-actions/amazon-ecr-login@v1
+    - name: Login to Amazon ECR
+      run: |
+        aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REGISTRY
 
-      - name: 🧰 Install kubectl and Helm
-        run: |
-          KUBECTL_VERSION=$(curl -sL https://dl.k8s.io/release/stable.txt | tr -d '\n')
-          echo "kubectl version to download: $KUBECTL_VERSION"
-          curl -LO "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl"
-          chmod +x kubectl
-          sudo mv kubectl /usr/local/bin/
+    - name: Build Docker Image - ${{ matrix.name }}
+      run: |
+        docker build -t ${{ matrix.ecr_repository }}:$IMAGE_TAG .
+        docker tag ${{ matrix.ecr_repository }}:$IMAGE_TAG $ECR_REGISTRY/${{ matrix.ecr_repository }}:$IMAGE_TAG
+      working-directory: ${{ matrix.service_path }}
 
-          curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+    - name: Push Docker Image to Amazon ECR - ${{ matrix.name }}
+      run: |
+        docker push $ECR_REGISTRY/${{ matrix.ecr_repository }}:$IMAGE_TAG
 
-      - name: 🔧 Update kubeconfig for EKS
-        run: |
-          aws eks update-kubeconfig --name ${{ secrets.EKS_CLUSTER_NAME }} --region ${{ env.AWS_REGION }}
-
-      - name: 🗑️ Uninstall existing Redis and Kafka Helm releases
-        run: |
-          helm uninstall my-redis || true
-          helm uninstall my-kafka || true
-
-      - name: 🗑️ Delete microservices deployments and services if exist
-        run: |
-          kubectl delete deployment user-service task-service api-gateway eureka-server --ignore-not-found
-          kubectl delete service user-service task-service api-gateway eureka-server --ignore-not-found
-
-      - name: 📦 Deploy Redis via Helm (No Persistence)
-        run: |
-          helm repo add bitnami https://charts.bitnami.com/bitnami
-          helm repo update
-          helm upgrade --install my-redis bitnami/redis \
-            --set architecture=standalone \
-            --set master.persistence.enabled=false
-
-      - name: 📦 Deploy Kafka via Helm (No Persistence)
-        run: |
-          helm upgrade --install my-kafka bitnami/kafka \
-            --set persistence.enabled=false
-
-      - name: 🚀 Build, Push & Deploy Microservices
-        run: |
-          declare -A PATHS=(
-            [user-service]="demo1/demo1"
-            [task-service]="demo2/demo2"
-            [api-gateway]="ApiGateway/ApiGateway"
-            [eureka-server]="service/service"
-          )
-
-          for SERVICE in "${!PATHS[@]}"; do
-            CONTEXT="${PATHS[$SERVICE]}"
-            echo "🔨 Building $SERVICE from $CONTEXT..."
-            docker build -t $SERVICE $CONTEXT
-
-            echo "🏷 Tagging $SERVICE for ECR..."
-            docker tag $SERVICE:latest ${{ env.ECR_REGISTRY }}/$SERVICE:latest
-
-            echo "📤 Pushing $SERVICE to ECR..."
-            docker push ${{ env.ECR_REGISTRY }}/$SERVICE:latest
-
-            echo "☸️ Deploying $SERVICE to EKS..."
-            kubectl apply -f $CONTEXT/deployment.yaml
-          done
+    - name: Deploy to Amazon ECS - ${{ matrix.name }}
+      run: |
+        aws ecs update-service \
+          --cluster $ECS_CLUSTER \
+          --service ${{ matrix.ecs_service }} \
+          --force-new-deployment \
+          --region $AWS_REGION
