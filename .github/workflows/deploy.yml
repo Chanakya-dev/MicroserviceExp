@@ -5,10 +5,6 @@ on:
     branches:
       - main
 
-# concurrency:
-#   group: build-deploy-${{ github.ref }}
-#   cancel-in-progress: true
-
 env:
   AWS_REGION: eu-north-1
   ECR_REGISTRY: 643208527492.dkr.ecr.eu-north-1.amazonaws.com
@@ -17,8 +13,8 @@ env:
 
 jobs:
   deploy-all:
-    timeout-minutes: 30
     runs-on: ubuntu-latest
+    timeout-minutes: 40
     strategy:
       matrix:
         include:
@@ -45,38 +41,44 @@ jobs:
     name: Build & Deploy ${{ matrix.name }}
 
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v3
+    - name: Checkout code
+      uses: actions/checkout@v3
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
 
-      - name: Login to Amazon ECR
-        run: |
-          aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REGISTRY
+    - name: Login to Amazon ECR
+      run: |
+        set -x
+        aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REGISTRY
 
-      - name: Debug Working Directory
-        run: pwd
-        working-directory: ${{ matrix.service_path }}
+    - name: Build Docker image - ${{ matrix.name }}
+      run: |
+        set -x
+        docker build -t ${{ matrix.ecr_repository }}:$IMAGE_TAG .
+        docker tag ${{ matrix.ecr_repository }}:$IMAGE_TAG $ECR_REGISTRY/${{ matrix.ecr_repository }}:$IMAGE_TAG
+      working-directory: ${{ matrix.service_path }}
 
-      - name: Build Docker Image - ${{ matrix.name }}
-        run: |
-          docker build -t ${{ matrix.ecr_repository }}:$IMAGE_TAG .
-          docker tag ${{ matrix.ecr_repository }}:$IMAGE_TAG $ECR_REGISTRY/${{ matrix.ecr_repository }}:$IMAGE_TAG
-        working-directory: ${{ matrix.service_path }}
+    - name: List Docker images after build
+      run: docker images
 
-      - name: Push Docker Image to Amazon ECR - ${{ matrix.name }}
-        run: |
-          docker push $ECR_REGISTRY/${{ matrix.ecr_repository }}:$IMAGE_TAG
+    - name: Push Docker image to Amazon ECR - ${{ matrix.name }}
+      run: |
+        set -x
+        docker push $ECR_REGISTRY/${{ matrix.ecr_repository }}:$IMAGE_TAG
 
-      - name: Deploy to Amazon ECS - ${{ matrix.name }}
-        run: |
-          aws ecs update-service \
-            --cluster $ECS_CLUSTER \
-            --service ${{ matrix.ecs_service }} \
-            --force-new-deployment \
-            --region $AWS_REGION
+    - name: List Docker images after push
+      run: docker images
+
+    - name: Deploy to Amazon ECS - ${{ matrix.name }}
+      run: |
+        set -x
+        aws ecs update-service \
+          --cluster $ECS_CLUSTER \
+          --service ${{ matrix.ecs_service }} \
+          --force-new-deployment \
+          --region $AWS_REGION
