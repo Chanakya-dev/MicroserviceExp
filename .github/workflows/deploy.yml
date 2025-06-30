@@ -33,7 +33,7 @@ jobs:
             ecs_service: api-gateway
 
           - name: eureka-server
-            service_path: eureka-server/eureka-server
+            service_path: service/service
             ecr_repository: taskmanagement/eureka-server
             ecs_service: eureka-server
 
